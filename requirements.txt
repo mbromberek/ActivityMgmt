@@ -1,0 +1,7 @@
+google-api-python-client
+pyperclip
+datetime
+configparser
+pyobjc
+py-applescript
+pandas

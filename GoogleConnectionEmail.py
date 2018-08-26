@@ -26,9 +26,10 @@ except ImportError:
 # at ~/.credentials/sheets.googleapis.com-python-quickstart.json
 #SCOPES = 'https://www.googleapis.com/auth/spreadsheets.readonly'
 # Allows for read and write
-# SCOPES = 'https://www.googleapis.com/auth/gmail.compose ' + 'https://www.googleapis.com/auth/spreadsheets'
-SCOPES = 'https://www.googleapis.com/auth/spreadsheets'
-CLIENT_SECRET_FILE = 'client_secret.json'
+SCOPES = 'https://www.googleapis.com/auth/gmail.compose '
+# SCOPES = 'https://www.googleapis.com/auth/spreadsheets'
+# CLIENT_SECRET_FILE = 'client_secret.json'
+CLIENT_SECRET_FILE = 'credentials_gmail.json'
 APPLICATION_NAME = 'ActivityAnalysis'
 
 
@@ -47,7 +48,7 @@ def get_credentials():
     os.makedirs(credential_dir)
 #   credential_path = os.path.join(credential_dir,'gmail-python-quickstart.json')
 #   credential_path = os.path.join(credential_dir,'googleapis.com-python-sheets-gmail.json')
-  credential_path = os.path.join(credential_dir,'googleapis.com-python-sheets.json')
+  credential_path = os.path.join(credential_dir,'googleapis.com-python-gmail.json')
 
   store = oauth2client.file.Storage(credential_path)
   credentials = store.get()
@@ -97,7 +98,7 @@ def send_message(service, user_id, message):
   """
 #   try:
   message = (service.users().messages().send(userId=user_id, body=message).execute())
-  print ('Message Id: %s' % message['id'])
+#   print ('Message Id: %s' % message['id'])
   return message
 #   except (errors.HttpError, error):
 #     print ('An error occurred: %s' % error)

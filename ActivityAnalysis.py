@@ -5,7 +5,7 @@ import os, platform
 import datetime, time
 
 import applescript
-import GoogleConnection
+import GoogleConnection, GoogleConnectionEmail 
 from apiclient import discovery
 import httplib2, base64
 import math
@@ -17,15 +17,6 @@ from summaries.ActivitySummary_Class import ActivitySummary
 from summaries.ExerciseInfo_Class import ExerciseInfo
 from util.Util import Util
 import PrintData
-
-# Column numbers for fields in spreadsheet
-RANK_COL = 0
-NAME_COL = 1
-USERNAME_COL = 2
-BRACKET_COL = 3
-SCORE_COL = 4
-PPR_COL = 5
-CHAMPION_COL = 6
 
 config = configparser.ConfigParser()
 
@@ -94,13 +85,6 @@ def exSummary(df,  dtStart, dtEnd):
 	ex['startDate'] = dtStart
 	ex['endDate'] = dtEnd
 	ex['totDays'] = (dtEnd - dtStart).days
-# 	ex['run'] = {}
-# 	ex['swim'] = {}
-# 	ex['cycle'] = {}
-		
-# 	print('dfRange:')
-# 	print('{:%Y-%m-%d}'.format(dtStart) + ' and ' + '{:%Y-%m-%d}'.format(dtEnd))
-# 	print(dfRange)
 
 	ex['run'] = ExerciseInfo('Running')
 	ex['run'].startTime = dtStart
@@ -134,17 +118,16 @@ def exSummary(df,  dtStart, dtEnd):
 	
 	return ex
 
-
-'''
-
-'''
+#######################################################
+# Gets totals for passed activity for the data between
+# passed dtStart and dtEnd
+# Then gets summaries of exercises split into run, swim,
+#  and cycle
+#######################################################
 def calcSummary(actvDf, exDf, dtStart, dtEnd):
 	dfRange = actvDf.loc['{:%Y-%m-%d}'.format(dtStart):'{:%Y-%m-%d}'.format(dtEnd)]
-# 	print('calcSummary:')
-# 	print(dfRange)
-	
-	activ = ActivitySummary(dtStart, dtEnd)
-	
+
+	activ = ActivitySummary(dtStart, dtEnd)	
 	activ.totDays = (dtEnd - dtStart).days
 	
 	activ.totSteps = dfRange['steps'].sum()
@@ -164,18 +147,24 @@ def calcSummary(actvDf, exDf, dtStart, dtEnd):
 
 
 
+#######################################################
+# Makes email connection with Google
+# Sends the passed email message
+#######################################################
+def sendEmail(config, msg):
+	# Setup Email connection
+	gcEmail = GoogleConnectionEmail
+	credentialsEmail = gcEmail.get_credentials()
+	httpEmail = credentialsEmail.authorize(httplib2.Http())
+	serviceEmail = discovery.build('gmail', 'v1', http=httpEmail)
+	
+	# Send Email
+	subj = 'Activity Analysis ' + '{:%Y-%m-%d}'.format(datetime.date.today())
+	msgRaw = gcEmail.create_message(config['email']['srcEmail'],config['email']['destEmail'], subj, msg)
+	sentMsg = gcEmail.send_message(serviceEmail, config['email']['srcEmail'], msgRaw)
+	
+	return sentMsg
 
-'''
-'''
-def sendEmail(service, message_text):
-	message = MIMEText(message_text)
-	message['to'] = to
-	message['from'] = sender
-	message['subject'] = subject
-	
-	emailMsg = {'raw': base64.urlsafe_b64encode(message.as_string().encode('utf-8'))}
-	
-	
 
 #######################################################
 # MAIN
@@ -214,16 +203,12 @@ def main():
 	sheetId = config['google_sheet']['sheet_id']
 	sheetName=config['google_sheet']['sheet_name']
 
-
 	activityHdr, activityData = getActivities(serviceSheet, spreadsheetId, sheetName)	
 	actvDf = generateActivityDataFrame(activityHdr, activityData)
 	'''
 	End Pull details from Activity Spreadsheet
 	'''
 	
-	
-	#End Google Sheet section
-
 	'''
 	Pull details from Exercise Spreadsheet
 	'''	
@@ -236,9 +221,7 @@ def main():
 	scpt.call('initialize',spreadsheetName)
 
 	exLst = scpt.call('getExercises',config['exercise']['number_exercises_to_read'])
-	#TODO Create function for setting up DataFrame and set key / datatypes like in generateActivties function
 	exDf = generateExerciseDataFrame(exLst)
-# 	print(exDf)
 	'''
 	End Pull details from Exercise Spreadsheet
 	'''	
@@ -248,16 +231,14 @@ def main():
 	exSummaryLst = []
 	for i in range(len(actvWeeks)):
 		actvSummaryLst.append(calcSummary(actvDf, exDf, actvWeeks[i]['start'], actvWeeks[i]['end']))
-# 		exSummaryLst.append(exSummary(exDf, actvWeeks[i]['start'], actvWeeks[i]['end']))
 
-	PrintData.printWeeklySummary(actvSummaryLst, exSummaryLst)
+	msg = PrintData.generateSummary(actvSummaryLst)
+	print(msg)
+		
+	sentMsg = sendEmail(config, msg)
+	print ('Message Id: %s' % sentMsg['id'])
 	
-	PrintData.printSummary(actvSummaryLst)
-	
-
-	
-# 	sendEmail
-	
+	return actvSummaryLst
 
 
 if __name__ == '__main__':

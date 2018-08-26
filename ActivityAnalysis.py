@@ -244,7 +244,6 @@ def main():
 	'''	
 	
 	
-	
 	actvSummaryLst = []
 	exSummaryLst = []
 	for i in range(len(actvWeeks)):

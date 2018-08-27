@@ -7,47 +7,47 @@ from util.Util import Util
 # Prints Activity details with comparison to 
 #  previous week. 
 ###############################################
-def printSummary(actvSummaryLst):
-	for i in range(len(actvSummaryLst)-1):
-		currWk = actvSummaryLst[i]
-		prevWk = actvSummaryLst[i+1]
-		
-		print('Week of ' + '{:%Y-%m-%d}'.format(currWk.startDate) + 
-			' to ' + '{:%Y-%m-%d}'.format(currWk.endDate) + ':')
-		wkDiff = currWk.exRun.ct - prevWk.exRun.ct
-		diffInd = ''
-		if (wkDiff < 0):
-			diffInd = 'less'
-			wkDiff = abs(wkDiff)
-		else:
-			diffInd = 'more'		
-		print('\tNumber of Runs: ' + '{0:.{1}f}'.format(currWk.exRun.ct,0) + 
-			' (' + 
-			'{0:.{1}f} '.format(wkDiff,0) + 
-			diffInd + 
-			' than previous week)')
-		
-		wkDiff = currWk.exRun.distTot - prevWk.exRun.distTot
-		if (wkDiff < 0):
-			diffInd = 'less'
-			wkDiff = abs(wkDiff)
-		else:
-			diffInd = 'more'
-		print('\tRan ' + '{0:.{1}f}'.format(currWk.exRun.distTot,2) + ' Miles' + 
-			' (' + '{0:.{1}f} '.format(wkDiff,2) + diffInd + 
-			' than previous week)'
-			)
-
-		wkDiff = currWk.exRun.durTot - prevWk.exRun.durTot
-		if (wkDiff < 0):
-			diffInd = 'less'
-			wkDiff = abs(wkDiff)
-		else:
-			diffInd = 'more'
-		print('\tRan for ' + Util.convertTimeFromSeconds(currWk.exRun.durTot) + 
-			' (' + Util.convertTimeFromSeconds(wkDiff) + ' ' + diffInd + 
-			' than previous week)'
-			)
+# def printSummary(actvSummaryLst):
+# 	for i in range(len(actvSummaryLst)-1):
+# 		currWk = actvSummaryLst[i]
+# 		prevWk = actvSummaryLst[i+1]
+# 		
+# 		print('Week of ' + '{:%Y-%m-%d}'.format(currWk.startDate) + 
+# 			' to ' + '{:%Y-%m-%d}'.format(currWk.endDate) + ':')
+# 		wkDiff = currWk.exRun.ct - prevWk.exRun.ct
+# 		diffInd = ''
+# 		if (wkDiff < 0):
+# 			diffInd = 'less'
+# 			wkDiff = abs(wkDiff)
+# 		else:
+# 			diffInd = 'more'		
+# 		print('\tNumber of Runs: ' + '{0:.{1}f}'.format(currWk.exRun.ct,0) + 
+# 			' (' + 
+# 			'{0:.{1}f} '.format(wkDiff,0) + 
+# 			diffInd + 
+# 			' than previous week)')
+# 		
+# 		wkDiff = currWk.exRun.distTot - prevWk.exRun.distTot
+# 		if (wkDiff < 0):
+# 			diffInd = 'less'
+# 			wkDiff = abs(wkDiff)
+# 		else:
+# 			diffInd = 'more'
+# 		print('\tRan ' + '{0:.{1}f}'.format(currWk.exRun.distTot,2) + ' Miles' + 
+# 			' (' + '{0:.{1}f} '.format(wkDiff,2) + diffInd + 
+# 			' than previous week)'
+# 			)
+# 
+# 		wkDiff = currWk.exRun.durTot - prevWk.exRun.durTot
+# 		if (wkDiff < 0):
+# 			diffInd = 'less'
+# 			wkDiff = abs(wkDiff)
+# 		else:
+# 			diffInd = 'more'
+# 		print('\tRan for ' + Util.convertTimeFromSeconds(currWk.exRun.durTot) + 
+# 			' (' + Util.convertTimeFromSeconds(wkDiff) + ' ' + diffInd + 
+# 			' than previous week)'
+# 			)
 
 ###############################################
 # Gets list of activities
@@ -129,7 +129,7 @@ def generateGenericActivitySummary(currWk, prevWk):
 
 	wkDiffActvCal = currWk.totActiveCal - prevWk.totActiveCal
 	diffIndActvCal = ''
-	if (wkDiffDist < 0):
+	if (wkDiffActvCal < 0):
 		diffIndActvCal = ' down'
 		wkDiffActvCal = abs(wkDiffActvCal)
 	else:
@@ -322,20 +322,9 @@ def printExerciseSummary(actv):
 
 
 
-# def printWeeklySummary(w1_actSummary, w2_actSummary, w1_exSummary, w2_exSummary):
+# def printWeeklySummary(acctSummaryLst, exSummaryLst):
 # 	print('')
-# 	w1_actSummary.printSummary()
-# 	printExerciseSummary(w1_exSummary)
-# 	print('')
-# 
-# 	w2_actSummary.printSummary()		
-# 	printExerciseSummary(w2_exSummary)
-# 	print('')
-
-def printWeeklySummary(acctSummaryLst, exSummaryLst):
-	print('')
-	for i in range(len(acctSummaryLst)):
-		acctSummaryLst[i].printSummary()
-# 		printExerciseSummary(exSummaryLst[i])
-		printExerciseSummary(acctSummaryLst[i])
-		print('')
+# 	for i in range(len(acctSummaryLst)):
+# 		acctSummaryLst[i].printSummary()
+# 		printExerciseSummary(acctSummaryLst[i])
+# 		print('')

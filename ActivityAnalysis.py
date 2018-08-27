@@ -1,3 +1,4 @@
+#! /Users/mikeyb/Applications/python3
 # pip3 install -r requirements.txt
 # pip3 install --upgrade google-api-python-client
 
@@ -20,11 +21,34 @@ import PrintData
 
 config = configparser.ConfigParser()
 
-'''
-Get activity details from Google Sheet
-	Split out the header and data from results
-Return: header and data
-'''
+#######################################################
+# Makes connection to Google spreadsheet
+# gets all Activity data from google sheet, and converts
+# the data into a DataFrame returning it. 
+#######################################################
+def getActivityData(config):
+	gc = GoogleConnection
+	credentials = gc.get_credentials()#might need to pass application name
+	http = credentials.authorize(httplib2.Http())
+	discoveryUrl = ('https://sheets.googleapis.com/$discovery/rest?'
+					'version=v4')
+	serviceSheet = discovery.build('sheets', 'v4', http=http,
+							  discoveryServiceUrl=discoveryUrl)
+
+	spreadsheetId = config['google_sheet']['spreadsheet_id']
+	sheetId = config['google_sheet']['sheet_id']
+	sheetName=config['google_sheet']['sheet_name']
+
+	activityHdr, activityData = getActivities(serviceSheet, spreadsheetId, sheetName)	
+	actvDf = generateActivityDataFrame(activityHdr, activityData)
+	
+	return actvDf
+
+#######################################################
+# Get activity details from Google Sheet
+# 	Split out the header and data from results
+# Return: header and data
+#######################################################
 def getActivities(service, spreadsheetId, sheetName):
 	rangeName = sheetName+'!A:I'
 	result = service.spreadsheets().values().get(
@@ -37,13 +61,13 @@ def getActivities(service, spreadsheetId, sheetName):
 		
 	return activityHdr, activityData
 
-'''
-Using past in header and data create DataFrame
-	Convert columns to correct formats
-	Generate Index
-
-Return: generated DataFrame
-'''
+#######################################################
+# Using past in header and data create DataFrame
+# 	Convert columns to correct formats
+# 	Generate Index
+# 
+# Return: generated DataFrame
+#######################################################
 def generateActivityDataFrame(hdr, data):
 	numericCols = ['distance', 'steps','floors_climbed', 'tot_cal_burned','active_calories', 'weight_(lb)']
 	dateCols = ['date']
@@ -59,6 +83,29 @@ def generateActivityDataFrame(hdr, data):
 	
 	return df
 
+#######################################################
+# Uses AppleScript to get contents of Exercise spreadsheet. 
+# Converts the data into a DataFrame and returns it. 
+#######################################################
+def getExerciseData(config):
+	pathToAppleScript = config['applescript']['script_path']
+	spreadsheetName = config['exercise']['spreadsheet_name']
+	# ) Read applescript file for reading and updating exercise spreadseeht
+	scptFile = open(pathToAppleScript + 'AddExercise.txt')
+	scptTxt = scptFile.read()
+	scpt = applescript.AppleScript(scptTxt)
+	scpt.call('initialize',spreadsheetName)
+
+	exLst = scpt.call('getExercises',config['exercise']['number_exercises_to_read'])
+	exDf = generateExerciseDataFrame(exLst)
+	
+	return exDf
+
+#######################################################
+# Creates DataFrame based on list of exercise data
+# Sets which fields are numeric and which are date types.
+# Sorts data by date
+#######################################################
 def generateExerciseDataFrame(exLst):
 	numericCols = ['distanseVal', 'caloriesVal','durationVal', 'hrVal']
 	dateCols = ['dateVal']
@@ -77,7 +124,9 @@ def generateExerciseDataFrame(exLst):
 
 	return exDf
 
-
+#######################################################
+# 
+#######################################################
 def exSummary(df,  dtStart, dtEnd):
 	dfRange = df.loc['{:%Y-%m-%d}'.format(dtStart):'{:%Y-%m-%d}'.format(dtEnd)]
 	
@@ -159,7 +208,8 @@ def sendEmail(config, msg):
 	serviceEmail = discovery.build('gmail', 'v1', http=httpEmail)
 	
 	# Send Email
-	subj = 'Activity Analysis ' + '{:%Y-%m-%d}'.format(datetime.date.today())
+# 	subj = 'Activity Analysis ' + '{:%Y-%m-%d}'.format(datetime.date.today())
+	subj = config['email']['subject'].replace('~date~', '{:%Y-%m-%d}'.format(datetime.date.today()))
 	msgRaw = gcEmail.create_message(config['email']['srcEmail'],config['email']['destEmail'], subj, msg)
 	sentMsg = gcEmail.send_message(serviceEmail, config['email']['srcEmail'], msgRaw)
 	
@@ -173,6 +223,7 @@ def main():
 	# Get config details
 	progDir = os.path.dirname(os.path.abspath(__file__))	
 	config.read(progDir + "/../configs/activityAnalysisConfig.txt")
+	
 	
 	numWeeks = int(config['activity']['number_weeks'])
 	if (numWeeks < 2):
@@ -188,51 +239,15 @@ def main():
 		actvWeeks[i]['end'] = actvWeeks[i-1]['start'] - datetime.timedelta(days=1)
 		actvWeeks[i]['start'] = actvWeeks[i]['end'] - datetime.timedelta(days=6)
 
-	'''
-	Pull details from Activity Spreadsheet
-	'''
-	gc = GoogleConnection
-	credentials = gc.get_credentials()#might need to pass application name
-	http = credentials.authorize(httplib2.Http())
-	discoveryUrl = ('https://sheets.googleapis.com/$discovery/rest?'
-					'version=v4')
-	serviceSheet = discovery.build('sheets', 'v4', http=http,
-							  discoveryServiceUrl=discoveryUrl)
-
-	spreadsheetId = config['google_sheet']['spreadsheet_id']
-	sheetId = config['google_sheet']['sheet_id']
-	sheetName=config['google_sheet']['sheet_name']
-
-	activityHdr, activityData = getActivities(serviceSheet, spreadsheetId, sheetName)	
-	actvDf = generateActivityDataFrame(activityHdr, activityData)
-	'''
-	End Pull details from Activity Spreadsheet
-	'''
-	
-	'''
-	Pull details from Exercise Spreadsheet
-	'''	
-	pathToAppleScript = config['applescript']['script_path']
-	spreadsheetName = config['exercise']['spreadsheet_name']
-	# ) Read applescript file for reading and updating exercise spreadseeht
-	scptFile = open(pathToAppleScript + 'AddExercise.txt')
-	scptTxt = scptFile.read()
-	scpt = applescript.AppleScript(scptTxt)
-	scpt.call('initialize',spreadsheetName)
-
-	exLst = scpt.call('getExercises',config['exercise']['number_exercises_to_read'])
-	exDf = generateExerciseDataFrame(exLst)
-	'''
-	End Pull details from Exercise Spreadsheet
-	'''	
-	
-	
+	actvDf = getActivityData(config)	
+	exDf = getExerciseData(config)
+		
 	actvSummaryLst = []
-	exSummaryLst = []
 	for i in range(len(actvWeeks)):
 		actvSummaryLst.append(calcSummary(actvDf, exDf, actvWeeks[i]['start'], actvWeeks[i]['end']))
 
 	msg = PrintData.generateSummary(actvSummaryLst)
+	
 	print(msg)
 		
 	sentMsg = sendEmail(config, msg)

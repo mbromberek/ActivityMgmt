@@ -20,6 +20,20 @@ from summaries.ExerciseInfo_Class import ExerciseInfo
 from util.Util import Util
 import PrintData
 
+
+#needed for attachment
+import smtplib  
+import mimetypes
+from email import encoders
+from email.message import Message
+from email.mime.audio import MIMEAudio
+from email.mime.base import MIMEBase
+from email.mime.image import MIMEImage
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
+
+
 config = configparser.ConfigParser()
 
 #######################################################
@@ -195,6 +209,23 @@ def calcSummary(actvDf, exDf, dtStart, dtEnd):
 	
 	return activ
 
+#######################################################
+# Get start and end dates of previous week and 
+# number of weeks past the previous week based on 
+# passed numWeeks value
+# Return: List of Dictionary for start and end of weeks 
+#######################################################
+def getWeeksStartEnd(numWeeks):
+	actvWeeks = []
+	actvWeeks.append({})
+	actvWeeks[0]['end'] = Util.getPreviousSunday(datetime.date.today())
+	actvWeeks[0]['start'] = actvWeeks[0]['end'] - datetime.timedelta(days=6)
+	for i in range(1,numWeeks):
+		actvWeeks.append({})
+		actvWeeks[i]['end'] = actvWeeks[i-1]['start'] - datetime.timedelta(days=1)
+		actvWeeks[i]['start'] = actvWeeks[i]['end'] - datetime.timedelta(days=6)
+
+	return actvWeeks
 
 
 #######################################################
@@ -211,10 +242,31 @@ def sendEmail(config, msg):
 	# Send Email
 # 	subj = 'Activity Analysis ' + '{:%Y-%m-%d}'.format(datetime.date.today())
 	subj = config['email']['subject'].replace('~date~', '{:%Y-%m-%d}'.format(datetime.date.today()))
-	msgRaw = gcEmail.create_message(config['email']['srcEmail'],config['email']['destEmail'], subj, msg)
+	
+	if (config['email']['type'] == 'HTML'):
+		msgRaw = createMessageHtml(config['email']['srcEmail'],config['email']['destEmail'], subj, msg)
+	else:
+		msgRaw = gcEmail.create_message(config['email']['srcEmail'],config['email']['destEmail'], subj, msg)
+
+	
 	sentMsg = gcEmail.send_message(serviceEmail, config['email']['srcEmail'], msgRaw)
 	
 	return sentMsg
+
+def createMessageHtml(sender, to, subj, msg):
+	message = MIMEMultipart('alternative') # needed for both plain & HTML (the MIME type is multipart/alternative)
+	message['Subject'] = subj
+	message['From'] = sender
+	message['To'] = to
+
+    #Create the body of the message (a plain-text and an HTML version)
+#     message.attach(MIMEText(message_text_plain, 'plain'))
+	message.attach(MIMEText(msg, 'html'))
+
+	raw_message_no_attachment = base64.urlsafe_b64encode(message.as_bytes())
+	raw_message_no_attachment = raw_message_no_attachment.decode()
+	body  = {'raw': raw_message_no_attachment}
+	return body
 
 
 #######################################################
@@ -229,16 +281,7 @@ def main():
 	numWeeks = int(config['activity']['number_weeks'])
 	if (numWeeks < 2):
 		numWeeks = 2
-
-	#Get start and end of previous week and week before that
-	actvWeeks = []
-	actvWeeks.append({})
-	actvWeeks[0]['end'] = Util.getPreviousSunday(datetime.date.today())
-	actvWeeks[0]['start'] = actvWeeks[0]['end'] - datetime.timedelta(days=6)
-	for i in range(1,numWeeks):
-		actvWeeks.append({})
-		actvWeeks[i]['end'] = actvWeeks[i-1]['start'] - datetime.timedelta(days=1)
-		actvWeeks[i]['start'] = actvWeeks[i]['end'] - datetime.timedelta(days=6)
+	actvWeeks = getWeeksStartEnd(numWeeks)
 
 	actvDf = getActivityData(config)	
 	exDf = getExerciseData(config)
@@ -247,7 +290,10 @@ def main():
 	for i in range(len(actvWeeks)):
 		actvSummaryLst.append(calcSummary(actvDf, exDf, actvWeeks[i]['start'], actvWeeks[i]['end']))
 
-	msg = PrintData.generateSummary(actvSummaryLst)
+	if (config['email']['type'] == 'HTML'):
+		msg = PrintData.generateHtmlSummary(actvSummaryLst)
+	else:
+		msg = PrintData.generateSummary(actvSummaryLst)
 	
 	print(msg)
 		
